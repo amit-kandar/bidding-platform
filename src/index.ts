@@ -1,11 +1,8 @@
-import dotenv from "dotenv";
+import "dotenv/config";
 import { app } from "./app";
 import { v2 as cloudinary } from "cloudinary";
 import logger from "./config/logger";
-
-dotenv.config({
-    path: "./.env"
-})
+import sequelize from "./database";
 
 const PORT = process.env.PORT || 8000;
 
@@ -16,11 +13,25 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET || ''
 });
 
+const startServer = async () => {
+    try {
+        await sequelize.authenticate();
+        logger.info('Database connected successfully.');
 
-app.on("error", err => {
-    logger.error("Error: ", err);
-})
+        await sequelize.sync({ force: false });
+        logger.info('All models were synchronized successfully.');
 
-app.listen(PORT, () => {
-    logger.info(`server is running at port ${PORT}`);
-})
+        app.on("error", (err) => {
+            logger.error("Error: ", err);
+        });
+
+        app.listen(PORT, () => {
+            logger.info(`Server is running at port ${PORT}`);
+        });
+    } catch (error) {
+        logger.error('Unable to connect to the database:', error);
+        process.exit(1);
+    }
+};
+
+startServer();
